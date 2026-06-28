@@ -44,28 +44,39 @@ class CloudUiPlaywrightTest {
     @BeforeAll
     void setUp() {
         playwright = Playwright.create();
-        // Use installed Edge or Chrome browser to avoid unreliable CDN downloads.
-        // If neither is available, fall back to chromium (which will download if needed).
         BrowserType browserType = playwright.chromium();
-        String channel = "msedge"; // Microsoft Edge (commonly pre-installed on Windows)
-        try {
+        
+        // In CI environments (GitHub Actions), use plain Chromium.
+        // Locally on Windows, try to use installed Edge or Chrome for reliability.
+        boolean isCi = System.getenv("CI") != null;
+        
+        if (isCi) {
+            // GitHub Actions on Linux: use system Chromium (already installed)
             browser = browserType.launch(
-                    new BrowserType.LaunchOptions()
-                            .setHeadless(true)
-                            .setChannel(channel));
-        } catch (Exception e) {
-            // Fall back to Chrome if Edge is not available
+                    new BrowserType.LaunchOptions().setHeadless(true));
+        } else {
+            // Local development on Windows: try installed browsers first
+            String channel = "msedge"; // Microsoft Edge (commonly pre-installed on Windows)
             try {
                 browser = browserType.launch(
                         new BrowserType.LaunchOptions()
                                 .setHeadless(true)
-                                .setChannel("chrome"));
-            } catch (Exception e2) {
-                // Last resort: use downloaded Chromium
-                browser = browserType.launch(
-                        new BrowserType.LaunchOptions().setHeadless(true));
+                                .setChannel(channel));
+            } catch (Exception e) {
+                // Fall back to Chrome if Edge is not available
+                try {
+                    browser = browserType.launch(
+                            new BrowserType.LaunchOptions()
+                                    .setHeadless(true)
+                                    .setChannel("chrome"));
+                } catch (Exception e2) {
+                    // Last resort: use downloaded Chromium
+                    browser = browserType.launch(
+                            new BrowserType.LaunchOptions().setHeadless(true));
+                }
             }
         }
+        
         page = browser.newPage();
     }
 
