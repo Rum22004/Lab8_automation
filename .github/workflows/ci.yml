@@ -8,8 +8,10 @@ on:
 jobs:
   build-test-report:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -18,13 +20,11 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Install system dependencies for Playwright
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
-
-      - name: Compile (main + tests)
+      - name: Compile main and test code
         run: mvn -B clean test-compile
+
+      - name: Install Playwright Chromium
+        run: mvn -B exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
 
       - name: Run tests
         run: mvn -B test
@@ -41,6 +41,7 @@ jobs:
         with:
           name: allure-results
           path: target/allure-results
+          if-no-files-found: warn
 
       - name: Upload Allure report
         if: always()
@@ -48,3 +49,4 @@ jobs:
         with:
           name: allure-report
           path: target/site/allure-maven-plugin
+          if-no-files-found: warn
